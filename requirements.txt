@@ -1,0 +1,51 @@
+# MedGemma RunPod API Dependencies
+# Pinned versions for reproducibility
+# Last updated: 2025-12-06
+
+# =============================================================================
+# Core Framework
+# =============================================================================
+fastapi==0.115.6
+uvicorn[standard]==0.32.1
+pydantic==2.10.3
+pydantic-settings==2.6.1
+python-multipart==0.0.17
+
+# =============================================================================
+# HuggingFace & Deep Learning
+# Source: https://huggingface.co/google/medgemma-27b-it
+# Requires transformers >= 4.50.0 for MedGemma support
+# =============================================================================
+transformers>=4.50.0
+accelerate>=1.2.0
+tokenizers>=0.21.0
+
+# =============================================================================
+# PyTorch (CUDA version installed via base image)
+# If not using NVIDIA base image, uncomment:
+# torch>=2.4.0
+# =============================================================================
+
+# =============================================================================
+# Quantization Support
+# Source: https://huggingface.co/docs/bitsandbytes
+# bitsandbytes provides 8-bit and 4-bit quantization for reduced VRAM usage
+# =============================================================================
+bitsandbytes>=0.45.0
+
+# =============================================================================
+# Image Processing
+# Source: https://huggingface.co/google/medgemma-27b-it
+# MedGemma normalizes images to 896x896 resolution
+# =============================================================================
+Pillow>=10.4.0
+
+# =============================================================================
+# HTTP Client (for image URL fetching if needed)
+# =============================================================================
+httpx>=0.28.1
+
+# =============================================================================
+# Utilities
+# =============================================================================
+python-dotenv>=1.0.1

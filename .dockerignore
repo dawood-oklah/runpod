@@ -1,0 +1,49 @@
+# Docker ignore file - exclude from build context
+
+# Git
+.git
+.gitignore
+
+# Environment files (will be passed at runtime)
+.env
+.env.local
+.env.*.local
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Documentation (not needed in container)
+*.md
+!README.md
+
+# Testing
+tests/
+.coverage
+htmlcov/
+
+# Model cache
+.cache/
+*.bin
+*.safetensors
+
+# Logs
+*.log
+logs/
+
+# Scripts not needed in container
+scripts/build_and_push.sh
+scripts/test_api.py
