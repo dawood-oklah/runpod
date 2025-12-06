@@ -79,6 +79,12 @@ class Settings(BaseSettings):
     top_k: int = 50
     repetition_penalty: float = 1.1
 
+    # Performance settings
+    # Source: https://huggingface.co/docs/transformers/en/perf_infer_gpu_one
+    enable_flash_attention: bool = True  # Use Flash Attention 2 if available
+    enable_warmup: bool = True  # Run warmup generation on startup
+    warmup_tokens: int = 10  # Number of tokens to generate during warmup
+
     # Image processing settings
     # Source: MedGemma normalizes images to 896x896 and encodes to 256 tokens
     max_image_size: int = 896

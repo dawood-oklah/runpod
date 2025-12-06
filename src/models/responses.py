@@ -109,6 +109,7 @@ class GPUInfo(BaseModel):
     device_count: int | None = Field(default=None, description="Number of GPUs")
     current_device: int | None = Field(default=None, description="Current GPU index")
     device_name: str | None = Field(default=None, description="GPU model name")
+    compute_capability: str | None = Field(default=None, description="GPU compute capability")
     memory_allocated_gb: float | None = Field(
         default=None,
         description="Allocated GPU memory in GB",
@@ -116,6 +117,34 @@ class GPUInfo(BaseModel):
     memory_reserved_gb: float | None = Field(
         default=None,
         description="Reserved GPU memory in GB",
+    )
+    memory_total_gb: float | None = Field(
+        default=None,
+        description="Total GPU memory in GB",
+    )
+    memory_free_gb: float | None = Field(
+        default=None,
+        description="Free GPU memory in GB",
+    )
+
+
+class PerformanceInfo(BaseModel):
+    """Performance optimization information."""
+
+    attention_implementation: str = Field(
+        description="Attention implementation used (flash_attention_2, sdpa, eager)"
+    )
+    flash_attention_available: bool | None = Field(
+        default=None,
+        description="Whether Flash Attention 2 is available",
+    )
+    cudnn_benchmark: bool | None = Field(
+        default=None,
+        description="Whether cuDNN benchmark mode is enabled",
+    )
+    tf32_enabled: bool | None = Field(
+        default=None,
+        description="Whether TF32 is enabled for matrix multiplications",
     )
 
 
@@ -129,6 +158,10 @@ class HealthResponse(BaseModel):
     model_id: str = Field(description="Model identifier")
     quantization: str = Field(description="Quantization method used")
     gpu: GPUInfo = Field(description="GPU status information")
+    performance: PerformanceInfo | None = Field(
+        default=None,
+        description="Performance optimization information",
+    )
     version: str = Field(default="1.0.0", description="API version")
     timestamp: int = Field(
         default_factory=lambda: int(datetime.now().timestamp()),

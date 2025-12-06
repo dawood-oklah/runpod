@@ -37,6 +37,13 @@ COPY requirements.txt .
 # Note: bitsandbytes requires CUDA and will be compiled during install
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Install flash-attn separately (requires ninja and packaging)
+# This provides 2-4x faster attention on Ampere+ GPUs
+# Source: https://github.com/Dao-AILab/flash-attention
+RUN pip install --no-cache-dir ninja packaging && \
+    pip install --no-cache-dir flash-attn --no-build-isolation || \
+    echo "Flash Attention installation failed - will use SDPA fallback"
+
 # Copy application code
 COPY src/ ./src/
 COPY .env.example ./.env.example

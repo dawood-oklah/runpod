@@ -36,6 +36,16 @@ hf_transfer>=0.1.8
 bitsandbytes>=0.45.0
 
 # =============================================================================
+# Performance Optimizations (Optional but Recommended)
+# Source: https://huggingface.co/docs/transformers/en/perf_infer_gpu_one
+# flash-attn provides 2-4x faster attention on Ampere+ GPUs (A6000, A100, etc.)
+# Requires: CUDA toolkit, GPU with compute capability >= 8.0
+# Installation may fail on non-Ampere GPUs - this is expected and the code
+# will fall back to SDPA (Scaled Dot Product Attention)
+# =============================================================================
+flash-attn>=2.5.0; platform_system != "Windows"
+
+# =============================================================================
 # Image Processing
 # Source: https://huggingface.co/google/medgemma-27b-it
 # MedGemma normalizes images to 896x896 resolution

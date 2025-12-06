@@ -43,6 +43,7 @@ from src.models.responses import (
     MedicalReportResponse,
     UsageInfo,
     GPUInfo,
+    PerformanceInfo,
 )
 from src.services.medgemma import MedGemmaService, get_medgemma_service
 
@@ -133,12 +134,18 @@ async def health_check() -> HealthResponse:
     service = get_medgemma_service()
     health_data = service.health_check()
 
+    # Build performance info if available
+    perf_info = None
+    if "performance" in health_data:
+        perf_info = PerformanceInfo(**health_data["performance"])
+
     return HealthResponse(
         status=health_data["status"],
         model_loaded=health_data["model_loaded"],
         model_id=health_data["model_id"],
         quantization=health_data["quantization"],
         gpu=GPUInfo(**health_data["gpu"]),
+        performance=perf_info,
         version=settings.api_version,
     )
 
