@@ -20,6 +20,14 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     """Application settings with environment variable support."""
 
+    # Pydantic v2 configuration
+    model_config = {
+        "env_file": ".env",
+        "env_file_encoding": "utf-8",
+        "case_sensitive": False,
+        "protected_namespaces": (),  # Disable protected namespace warning for model_id
+    }
+
     # API Configuration
     api_title: str = "MedGemma API"
     api_description: str = "FastAPI service for MedGemma-27B multimodal medical AI model"
@@ -85,12 +93,6 @@ class Settings(BaseSettings):
 You provide accurate, evidence-based medical information while being clear about limitations.
 Always recommend consulting healthcare professionals for medical decisions.
 When analyzing medical images, describe findings systematically and note any limitations in image quality."""
-
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        case_sensitive = False
-
 
 @lru_cache()
 def get_settings() -> Settings:

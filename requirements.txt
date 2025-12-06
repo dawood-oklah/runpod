@@ -19,6 +19,8 @@ python-multipart==0.0.17
 transformers>=4.50.0
 accelerate>=1.2.0
 tokenizers>=0.21.0
+huggingface_hub>=0.26.0
+hf_transfer>=0.1.8
 
 # =============================================================================
 # PyTorch (CUDA version installed via base image)

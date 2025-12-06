@@ -350,15 +350,35 @@ curl -o src/main.py https://raw.githubusercontent.com/YOU/MedGemmaRunpod/main/sr
 
 ---
 
-## Step 7: Install Dependencies
+## Step 7: Install Dependencies (Persistent Setup)
 
-### 7.1 Navigate to Project
+**IMPORTANT:** Packages installed with regular `pip install` are lost when the pod restarts.
+We'll create a virtual environment in `/workspace` to make installations persistent.
+
+### 7.1 Create Persistent Virtual Environment
+
+```bash
+cd /workspace
+
+# Create virtual environment (persists across restarts)
+python -m venv venv
+
+# Activate it
+source /workspace/venv/bin/activate
+```
+
+You should see `(venv)` at the beginning of your prompt:
+```
+(venv) root@abc123:/workspace#
+```
+
+### 7.2 Navigate to Project
 
 ```bash
 cd /workspace/MedGemmaRunpod
 ```
 
-### 7.2 Install Python Packages
+### 7.3 Install Python Packages
 
 ```bash
 pip install -r requirements.txt
@@ -369,19 +389,21 @@ pip install -r requirements.txt
 Collecting fastapi==0.115.6
 Collecting uvicorn[standard]==0.32.1
 Collecting transformers>=4.50.0
+Collecting hf_transfer>=0.1.8
 ...
-Successfully installed fastapi-0.115.6 uvicorn-0.32.1 transformers-4.50.0 ...
+Successfully installed fastapi-0.115.6 uvicorn-0.32.1 transformers-4.50.0 hf_transfer-0.1.8 ...
 ```
 
 **Install time:** 3-5 minutes
 
-### 7.3 Verify Installation
+### 7.4 Verify Installation
 
 ```bash
 python -c "import torch; print(f'PyTorch: {torch.__version__}')"
 python -c "import torch; print(f'CUDA available: {torch.cuda.is_available()}')"
 python -c "from transformers import AutoProcessor; print('Transformers OK')"
 python -c "import bitsandbytes; print('bitsandbytes OK')"
+python -c "import hf_transfer; print('hf_transfer OK')"
 ```
 
 **Expected output:**
@@ -390,6 +412,7 @@ PyTorch: 2.4.0+cu124
 CUDA available: True
 Transformers OK
 bitsandbytes OK
+hf_transfer OK
 ```
 
 ---
@@ -447,7 +470,15 @@ cat .env | grep -E "^(HF_TOKEN|API_KEY)=" | head -c 50
 
 ## Step 9: Start the API Server
 
-### 9.1 Login to HuggingFace CLI (First Time Only)
+### 9.1 Activate Virtual Environment (If Not Already Active)
+
+```bash
+source /workspace/venv/bin/activate
+```
+
+You should see `(venv)` in your prompt.
+
+### 9.2 Login to HuggingFace CLI (First Time Only)
 
 ```bash
 huggingface-cli login --token $HF_TOKEN
@@ -459,14 +490,26 @@ Or if that doesn't work:
 python -c "from huggingface_hub import login; login(token='$HF_TOKEN')"
 ```
 
-### 9.2 Start the Server
+### 9.3 Set Persistent Model Cache (IMPORTANT)
+
+This prevents re-downloading the 50GB model on every restart:
+
+```bash
+# Set HuggingFace cache to persistent /workspace directory
+export HF_HOME=/workspace/.cache/huggingface
+export TRANSFORMERS_CACHE=/workspace/.cache/huggingface
+export HF_HUB_CACHE=/workspace/.cache/huggingface
+mkdir -p /workspace/.cache/huggingface
+```
+
+### 9.4 Start the Server
 
 ```bash
 cd /workspace/MedGemmaRunpod
 python -m uvicorn src.main:app --host 0.0.0.0 --port 8000
 ```
 
-### 9.3 Watch the Startup
+### 9.5 Watch the Startup
 
 You'll see:
 
@@ -585,7 +628,8 @@ apt-get update && apt-get install -y screen
 # Create a new screen session
 screen -S medgemma
 
-# Start the server
+# Activate venv and start the server
+source /workspace/venv/bin/activate
 cd /workspace/MedGemmaRunpod
 python -m uvicorn src.main:app --host 0.0.0.0 --port 8000
 
@@ -599,6 +643,7 @@ screen -r medgemma
 ### Option B: Use nohup
 
 ```bash
+source /workspace/venv/bin/activate
 cd /workspace/MedGemmaRunpod
 nohup python -m uvicorn src.main:app --host 0.0.0.0 --port 8000 > server.log 2>&1 &
 
@@ -618,7 +663,8 @@ apt-get update && apt-get install -y tmux
 # Create session
 tmux new -s medgemma
 
-# Start server
+# Activate venv and start server
+source /workspace/venv/bin/activate
 cd /workspace/MedGemmaRunpod
 python -m uvicorn src.main:app --host 0.0.0.0 --port 8000
 
@@ -637,16 +683,35 @@ Create a startup script that runs when the pod starts:
 ```bash
 cat > /workspace/start_medgemma.sh << 'EOF'
 #!/bin/bash
+# Activate the persistent virtual environment
+source /workspace/venv/bin/activate
+
+# Set HuggingFace cache to persistent location (PREVENTS RE-DOWNLOADING MODEL)
+export HF_HOME=/workspace/.cache/huggingface
+export TRANSFORMERS_CACHE=/workspace/.cache/huggingface
+export HF_HUB_CACHE=/workspace/.cache/huggingface
+mkdir -p /workspace/.cache/huggingface
+
+# Navigate to project
 cd /workspace/MedGemmaRunpod
+
+# Load environment variables
 source .env
 export HF_TOKEN API_KEY MODEL_ID QUANTIZATION
+
+# Start the server
 python -m uvicorn src.main:app --host 0.0.0.0 --port 8000
 EOF
 
 chmod +x /workspace/start_medgemma.sh
 ```
 
-Then in RunPod pod settings, set **Start Command** to:
+**After any pod restart, just run:**
+```bash
+/workspace/start_medgemma.sh
+```
+
+Or in RunPod pod settings, set **Start Command** to:
 ```
 /workspace/start_medgemma.sh
 ```
@@ -655,9 +720,34 @@ Then in RunPod pod settings, set **Start Command** to:
 
 ## Troubleshooting
 
+### Problem: "No module named uvicorn" after pod restart
+
+**Cause:** Packages installed without venv are lost on restart.
+
+```bash
+# Activate the persistent venv first
+source /workspace/venv/bin/activate
+
+# Then start server
+cd /workspace/MedGemmaRunpod
+python -m uvicorn src.main:app --host 0.0.0.0 --port 8000
+```
+
+If venv doesn't exist, recreate it:
+```bash
+cd /workspace
+python -m venv venv
+source /workspace/venv/bin/activate
+cd /workspace/MedGemmaRunpod
+pip install -r requirements.txt
+```
+
 ### Problem: "Module not found" errors
 
 ```bash
+# Make sure venv is activated
+source /workspace/venv/bin/activate
+
 # Make sure you're in the right directory
 cd /workspace/MedGemmaRunpod
 
@@ -723,14 +813,27 @@ Pods have two storage areas:
 ## Quick Command Reference
 
 ```bash
+# ALWAYS activate venv first!
+source /workspace/venv/bin/activate
+
+# Set persistent cache (prevents re-downloading model)
+export HF_HOME=/workspace/.cache/huggingface
+export TRANSFORMERS_CACHE=/workspace/.cache/huggingface
+export HF_HUB_CACHE=/workspace/.cache/huggingface
+
 # Navigate to project
 cd /workspace/MedGemmaRunpod
 
 # Start server
 python -m uvicorn src.main:app --host 0.0.0.0 --port 8000
 
+# OR use the startup script (includes venv + cache setup)
+/workspace/start_medgemma.sh
+
 # Start in background with screen
 screen -S medgemma
+source /workspace/venv/bin/activate
+cd /workspace/MedGemmaRunpod
 python -m uvicorn src.main:app --host 0.0.0.0 --port 8000
 # Ctrl+A, D to detach
 
