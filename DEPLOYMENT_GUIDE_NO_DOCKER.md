@@ -355,15 +355,28 @@ curl -o src/main.py https://raw.githubusercontent.com/YOU/MedGemmaRunpod/main/sr
 **IMPORTANT:** Packages installed with regular `pip install` are lost when the pod restarts.
 We'll create a virtual environment in `/workspace` to make installations persistent.
 
+---
+
+### 🔴 OUTSIDE VENV (System Shell)
+
 ### 7.1 Create Persistent Virtual Environment
 
 ```bash
+# Run these OUTSIDE venv (regular shell)
 cd /workspace
 
 # Create virtual environment (persists across restarts)
 python -m venv venv
+```
 
-# Activate it
+---
+
+### 🟢 INSIDE VENV (Activated)
+
+### 7.2 Activate Virtual Environment
+
+```bash
+# Activate venv - DO THIS FIRST!
 source /workspace/venv/bin/activate
 ```
 
@@ -372,15 +385,19 @@ You should see `(venv)` at the beginning of your prompt:
 (venv) root@abc123:/workspace#
 ```
 
-### 7.2 Navigate to Project
+**From now on, all commands run INSIDE the venv.**
+
+### 7.3 Navigate to Project
 
 ```bash
+# INSIDE VENV
 cd /workspace/MedGemmaRunpod
 ```
 
-### 7.3 Install Python Packages
+### 7.4 Install Python Packages
 
 ```bash
+# INSIDE VENV
 pip install -r requirements.txt
 ```
 
@@ -396,9 +413,10 @@ Successfully installed fastapi-0.115.6 uvicorn-0.32.1 transformers-4.50.0 hf_tra
 
 **Install time:** 3-5 minutes
 
-### 7.4 Verify Installation
+### 7.5 Verify Installation
 
 ```bash
+# INSIDE VENV
 python -c "import torch; print(f'PyTorch: {torch.__version__}')"
 python -c "import torch; print(f'CUDA available: {torch.cuda.is_available()}')"
 python -c "from transformers import AutoProcessor; print('Transformers OK')"
@@ -418,6 +436,13 @@ hf_transfer OK
 ---
 
 ## Step 8: Configure Environment
+
+### 🟢 ALL COMMANDS BELOW ARE INSIDE VENV
+
+Make sure you see `(venv)` in your prompt. If not, run:
+```bash
+source /workspace/venv/bin/activate
+```
 
 ### 8.1 Create .env File
 
@@ -470,41 +495,47 @@ cat .env | grep -E "^(HF_TOKEN|API_KEY)=" | head -c 50
 
 ## Step 9: Start the API Server
 
+### 🟢 ALL COMMANDS BELOW ARE INSIDE VENV
+
 ### 9.1 Activate Virtual Environment (If Not Already Active)
 
 ```bash
+# Check if you see (venv) in prompt. If not:
 source /workspace/venv/bin/activate
 ```
 
 You should see `(venv)` in your prompt.
 
-### 9.2 Login to HuggingFace CLI (First Time Only)
-
-```bash
-huggingface-cli login --token $HF_TOKEN
-```
-
-Or if that doesn't work:
-
-```bash
-python -c "from huggingface_hub import login; login(token='$HF_TOKEN')"
-```
-
-### 9.3 Set Persistent Model Cache (IMPORTANT)
+### 9.2 Set Persistent Model Cache (IMPORTANT - Do This First!)
 
 This prevents re-downloading the 50GB model on every restart:
 
 ```bash
-# Set HuggingFace cache to persistent /workspace directory
+# INSIDE VENV - Set HuggingFace cache to persistent /workspace directory
 export HF_HOME=/workspace/.cache/huggingface
 export TRANSFORMERS_CACHE=/workspace/.cache/huggingface
 export HF_HUB_CACHE=/workspace/.cache/huggingface
 mkdir -p /workspace/.cache/huggingface
 ```
 
+### 9.3 Login to HuggingFace CLI (First Time Only)
+
+```bash
+# INSIDE VENV
+huggingface-cli login --token $HF_TOKEN
+```
+
+Or if that doesn't work:
+
+```bash
+# INSIDE VENV
+python -c "from huggingface_hub import login; login(token='$HF_TOKEN')"
+```
+
 ### 9.4 Start the Server
 
 ```bash
+# INSIDE VENV
 cd /workspace/MedGemmaRunpod
 python -m uvicorn src.main:app --host 0.0.0.0 --port 8000
 ```
@@ -812,42 +843,74 @@ Pods have two storage areas:
 
 ## Quick Command Reference
 
+### 🔴 OUTSIDE VENV (Regular Shell)
+
 ```bash
-# ALWAYS activate venv first!
-source /workspace/venv/bin/activate
-
-# Set persistent cache (prevents re-downloading model)
-export HF_HOME=/workspace/.cache/huggingface
-export TRANSFORMERS_CACHE=/workspace/.cache/huggingface
-export HF_HUB_CACHE=/workspace/.cache/huggingface
-
-# Navigate to project
-cd /workspace/MedGemmaRunpod
-
-# Start server
-python -m uvicorn src.main:app --host 0.0.0.0 --port 8000
-
-# OR use the startup script (includes venv + cache setup)
-/workspace/start_medgemma.sh
-
-# Start in background with screen
-screen -S medgemma
-source /workspace/venv/bin/activate
-cd /workspace/MedGemmaRunpod
-python -m uvicorn src.main:app --host 0.0.0.0 --port 8000
-# Ctrl+A, D to detach
-
-# Reattach to screen
-screen -r medgemma
+# Create venv (one-time only)
+cd /workspace
+python -m venv venv
 
 # View GPU usage
 nvidia-smi
 
-# Check server logs (if using nohup)
-tail -f server.log
-
 # Kill server
 pkill -f uvicorn
+
+# Use startup script (handles everything automatically)
+/workspace/start_medgemma.sh
+```
+
+### 🟢 INSIDE VENV (After Activation)
+
+```bash
+# Step 1: Activate venv (ALWAYS DO THIS FIRST!)
+source /workspace/venv/bin/activate
+
+# Step 2: Set persistent cache (prevents re-downloading model)
+export HF_HOME=/workspace/.cache/huggingface
+export TRANSFORMERS_CACHE=/workspace/.cache/huggingface
+export HF_HUB_CACHE=/workspace/.cache/huggingface
+mkdir -p /workspace/.cache/huggingface
+
+# Step 3: Navigate to project
+cd /workspace/MedGemmaRunpod
+
+# Step 4: Start server
+python -m uvicorn src.main:app --host 0.0.0.0 --port 8000
+```
+
+### Complete Copy-Paste Block (All-in-One)
+
+```bash
+# Run this entire block after pod restart:
+source /workspace/venv/bin/activate && \
+export HF_HOME=/workspace/.cache/huggingface && \
+export TRANSFORMERS_CACHE=/workspace/.cache/huggingface && \
+export HF_HUB_CACHE=/workspace/.cache/huggingface && \
+mkdir -p /workspace/.cache/huggingface && \
+cd /workspace/MedGemmaRunpod && \
+python -m uvicorn src.main:app --host 0.0.0.0 --port 8000
+```
+
+### Using Screen (Background Process)
+
+```bash
+# Install screen (one-time, OUTSIDE venv)
+apt-get update && apt-get install -y screen
+
+# Create screen session
+screen -S medgemma
+
+# INSIDE screen, run the all-in-one block above
+source /workspace/venv/bin/activate && \
+export HF_HOME=/workspace/.cache/huggingface && \
+export TRANSFORMERS_CACHE=/workspace/.cache/huggingface && \
+export HF_HUB_CACHE=/workspace/.cache/huggingface && \
+cd /workspace/MedGemmaRunpod && \
+python -m uvicorn src.main:app --host 0.0.0.0 --port 8000
+
+# Detach: Ctrl+A, then D
+# Reattach later: screen -r medgemma
 ```
 
 ---

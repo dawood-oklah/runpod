@@ -305,8 +305,22 @@ class MedGemmaService:
             return_tensors="pt",
         )
 
-        # Move inputs to model device
-        inputs = {k: v.to(self.model.device) for k, v in inputs.items()}
+        # Move inputs to model device with correct dtype
+        # Fix for CUDA device-side assert error: ensure tensors are on correct device and dtype
+        # For quantized models, self.model.device may not work correctly, so use cuda:0
+        if torch.cuda.is_available():
+            model_device = torch.device("cuda:0")
+        else:
+            model_device = torch.device("cpu")
+
+        processed_inputs = {}
+        for k, v in inputs.items():
+            if isinstance(v, torch.Tensor):
+                # Move to device - keep original dtype for input_ids and attention_mask
+                processed_inputs[k] = v.to(model_device)
+            else:
+                processed_inputs[k] = v
+        inputs = processed_inputs
 
         # Check input length
         input_length = inputs["input_ids"].shape[-1]
@@ -334,9 +348,21 @@ class MedGemmaService:
         if gen_kwargs["temperature"] == 0:
             gen_kwargs["do_sample"] = False
 
+        # Clear CUDA cache before generation to prevent memory issues
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+
         # Generate response
         logger.info("Generating response...")
-        outputs = self.model.generate(**inputs, **gen_kwargs)
+        try:
+            outputs = self.model.generate(**inputs, **gen_kwargs)
+        except RuntimeError as e:
+            # Handle CUDA errors gracefully
+            if "CUDA" in str(e):
+                torch.cuda.empty_cache()
+                logger.error(f"CUDA error during generation: {e}")
+                raise RuntimeError(f"GPU error during generation. Try reducing input length or restarting the server. Error: {e}")
+            raise
 
         # Decode only the new tokens (exclude input)
         generated_tokens = outputs[0][input_length:]
